@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.433">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Mu Niu, Yixin Xue, Amber Wang, David Lin, Qifei Cui">
+<meta name="dcterms.date" content="2023-12-13">
+
+<title>XGBoost Vignette: Fraud Detection</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="vignette_files/libs/clipboard/clipboard.min.js"></script>
+<script src="vignette_files/libs/quarto-html/quarto.js"></script>
+<script src="vignette_files/libs/quarto-html/popper.min.js"></script>
+<script src="vignette_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="vignette_files/libs/quarto-html/anchor.min.js"></script>
+<link href="vignette_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="vignette_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="vignette_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="vignette_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="vignette_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">XGBoost Vignette: Fraud Detection</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Mu Niu, Yixin Xue, Amber Wang, David Lin, Qifei Cui </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">December 13, 2023</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="objectives" class="level4">
+<h4 class="anchored" data-anchor-id="objectives">Objectives</h4>
+<p>In this vignette, you will embark on an in-depth exploration, starting from the foundational theory of XGBoost to its practical application such as Exploratory Data Analysis(EDA) and XGBoost model training. This journey will lead you to effectively utilize XGBoost, which is a cutting-edge and industry-standard model. You’ll develop skills in:</p>
+<ul>
+<li><p>Utilizing functions from the <strong>ggplot</strong> and <strong>corrplot</strong> packages for EDA and data visualization. These tools are essential for understanding the underlying patterns and relationships in your data.</p></li>
+<li><p>Employing functions from the <strong>xgboost</strong> package to train an Extreme Gradient Boosting Model. This powerful machine learning technique is renowned for its efficiency and effectiveness in various predictive modeling tasks.</p></li>
+<li><p>Leveraging functions from the <strong>pROC</strong> package to evaluate the performance of your model. This is crucial for assessing the effectiveness of your predictive model in real-world scenarios.</p></li>
+</ul>
+<p>By the end of this vignette, you will have a solid understanding of how to effectively use these tools in a cohesive workflow to build and assess a robust machine learning model.</p>
+</section>
+<section id="prerequisites" class="level4">
+<h4 class="anchored" data-anchor-id="prerequisites">Prerequisites</h4>
+<p>First, please follow the action item below to get set up for the vignette. You may need to install one or more packages if the library() calls return an error.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># load packages</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidymodels)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(xgboost)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pROC)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(corrplot)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gridExtra)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(DMwR)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># read data</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/card_transdata.csv"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p>XGBoost, an acronym for eXtreme Gradient Boosting, was crafted by Dr.&nbsp;Tianqi Chen in 2016 as a gradient-boosting algorithm. Demonstrating remarkable success, it has emerged as a formidable player in various data science competitions. Renowned for its exceptional performance, XGBoost stands out as a robust solution for tasks such as handling structured data, text classification, regression, and notably, exhibiting superior capabilities on large-scale datasets. Our vignette presents a comprehensive exploration of XGBoost, including its mathematical principles, programming language support, and practical application in classification problems.</p>
+</section>
+<section id="principal-and-theory" class="level2">
+<h2 class="anchored" data-anchor-id="principal-and-theory">Principal and Theory</h2>
+<p>Prior to implementing the XGBoost model on the dataset, it is crucial to first understand the underlying mathematical principles of the Boosted Trees and XGBoost</p>
+<p><strong>Gradient Boosted Decision Tree (GBDT)</strong></p>
+<p>In GBDT, the prediction of observation i is the sum of the predicted values from each of the k trees in the ensemble.</p>
+<p><span class="math display">\[\hat{y} = \sum_{i=1}^{k} f_k(x_i)\]</span>Each tree in the boosting model fits the negative gradient of the loss function to the current model’s prediction, and the current model’s prediction is the sum of the first k-1 trees.</p>
+<p>If we use mean squared error as the loss function in a regression task, each tree simply fits the residual.</p>
+<p>For example, suppose a person is 30 years old, and a GBDT model is used to predict his age.</p>
+<ul>
+<li><p>Given the dataset, suppose the first tree’s prediction is 20.</p></li>
+<li><p>Then the second tree fits the residual, which is 30 - 20 = 10. Suppose the second tree outputs 7.</p></li>
+<li><p>Then the third tree fits the residual 10 - 7 = 3. Suppose the third tree outputs 2.</p></li>
+<li><p>By adding the prediction of the three trees, we get our final prediction.</p></li>
+</ul>
+<p><strong>XGBoost</strong></p>
+<p>XGBoost is an efficient and scalable implementation of the gradient-boosted decision tree.</p>
+<ul>
+<li>Tree Boosting</li>
+</ul>
+<p>The objective function for k-th tree is <span class="math display">\[\sum_{i=1}^{n} l(y_i, \hat{y_i}^{(k)})+\sum_{i=1}^{K}\omega(f_i)\]</span></p>
+<p>The first term in the objective function denotes the loss function. It can be MSE in regression or cross-entropy in classification problems. The second term <span class="math inline">\(\omega(f_i)\)</span> is a regularized term to control the model’s complexity to avoid overfitting.</p>
+<p>When additively training the model, XGBoost used a second-order Taylor expansion to approximate the objective function instead of using the negative gradient.</p>
+<p>After derivation, the optimization goal at step k will be <span class="math display">\[\sum_{i=1}^{n}[g_if_k(x_i) + \frac{1}{2}h_{i}f_k^2(x_i)] + \omega(f_k)\]</span></p>
+<p>where <span class="math inline">\(g_i\)</span> and <span class="math inline">\(h_i\)</span> denote the first-order and second-order derivative of the loss function to the current model’s prediction. i.e.&nbsp;<span class="math inline">\(g_i = \partial_{\hat{y_i}^{k-1}}l(y_i, \hat{y_i}^{k-1})\)</span> and <span class="math inline">\(h_i = \partial^2_{\hat{y_i}{k-1}}l(y_i, \hat{y_i}^{k-1})\)</span></p>
+<p>We find that the objective function for each tree depends only on <span class="math inline">\(g_i\)</span> and <span class="math inline">\(h_i\)</span>, derivatives of the loss function. Therefore, XGBoost can be widely used in many scenarios, including regression, classification, and ranking problems, as long as XGBoost is given a loss function that is second-order differentiable. You can even customize your loss function in XGBoost[<span class="citation" data-cites="He2021">@He2021</span>]</p>
+<p><strong>Approximate Split Finding</strong></p>
+<p>We first look at a basic greedy approach for finding best split point.</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="img/Exact_greedy_algorithm.png" width="500" height="300"></p>
+</div>
+</div>
+<p>In the above Exact Greedy Algorithm, we need to traverse every possible value of every feature to find the best split point. The score measures the reduction of loss function before and after the split. However, the method is inefficient when dealing with large datasets.</p>
+<p>Instead, XGBoost used an approximated approach to find split points efficiently.</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="img/approximate_algorithm.webp" width="500" height="300"></p>
+</div>
+</div>
+<p>In the approximate framework, we first select some candidate splitting points according to percentiles of the feature distribution based on some criteria. For instance, a sorted feature column contains 10 values [1,2,2,2,2,4,5,7,9,20]. A 0.6 quantile corresponds to 4.</p>
+<p><strong>Weighted Quantile Sketch</strong></p>
+<p>How do we find these candidate split points? We cannot assign equal weights to every observation of the feature, as larger values may have a more significant impact on the loss function. Therefore, we need to calculate a weight for each feature value to make candidates distribute evenly on the data.</p>
+<p>For each observation, XGBoost used its second-order derivative <span class="math inline">\(h_i\)</span> as weight. Formally, let multi-set <span class="math inline">\(D_k = {(x_{1k},h_1), (x_{2k}, h_2)&lt;e2&gt;&lt;80&gt;&lt;a6&gt;(x_{nk}, h_{n})}\)</span> denote k-th feature value and its corresponding second-order gradient, the rank function is <span class="math display">\[r_k(z) = \frac{1}{\sum_{(x,h) \in D_k}h}\sum_{(x,h) \in D_k, x &lt; z}h\]</span>.</p>
+<p>For example, given</p>
+<table class="table">
+<thead>
+<tr class="header">
+<th>feature value</th>
+<th>1</th>
+<th>4</th>
+<th>6</th>
+<th>10</th>
+<th>12</th>
+<th>20</th>
+<th>30</th>
+<th>44</th>
+<th>59</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math display">\[h_i\]</span></td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.4</td>
+<td>0.2</td>
+<td>0.6</td>
+</tr>
+</tbody>
+</table>
+<p>30 corresponds to <span class="math inline">\(\frac{1}{3}\)</span> percentile, and 59 corresponds to <span class="math inline">\(\frac{2}{3}\)</span> percentile.</p>
+<p><strong>Other techniques in XGBoost to improve efficiency</strong></p>
+<ul>
+<li><p>Each column (feature) of the dataset is pre-sorted and stored in memory as a column block. Each block contains the sorted feature column and each observation’s corresponding label value. Recall that when finding the best split point in a decision tree, samples with the feature value less than the split value go to the left subtree, and samples with the feature value larger than the split point go to the right subtree. Instead of sorting in every split in every tree, this pre-sorting step is done only once. Then the efficiently sorted columns will be reused many times in building every single tree.</p></li>
+<li><p>XGBoost supports parallel computing during the process of finding the best split point in building a single tree. Then the information gain calculation for each feature can be done in parallel. Moreover, You can tune the parameter nthread to control the number of cores used in training the XGBoost model.</p></li>
+<li><p>XGBoost supports column subsampling similar to a random forest.</p></li>
+</ul>
+</section>
+<section id="application-in-r-credit-card-fraud-detection" class="level2">
+<h2 class="anchored" data-anchor-id="application-in-r-credit-card-fraud-detection">Application in R: Credit Card Fraud Detection</h2>
+<p>Having grasped the mathematical concepts behind it, we can now proceed to the most exhilarating segment: applying this model in R</p>
+<p><strong>Dataset Introduction</strong></p>
+<p>This vignette is conducted on a simulated <a href="https://www.kaggle.com/datasets/dhanushnarayananr/credit-card-fraud/data">“Credit Card Fraud”</a> dataset obtained on Kaggle<span class="citation" data-cites="ULB2018">[@ULB2018]</span>. This dataset presents a binary classification problem, classifying transactions as either fraudulent or legitimate. With 8 variables and a total of 1,000,000 observations, only 8.74% (87,403) are marked as fraudulent, highlighting a significant class imbalance.</p>
+<div class="cell">
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<colgroup>
+<col style="width: 13%">
+<col style="width: 21%">
+<col style="width: 21%">
+<col style="width: 11%">
+<col style="width: 7%">
+<col style="width: 11%">
+<col style="width: 9%">
+<col style="width: 4%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">distance_from_home</th>
+<th style="text-align: right;">distance_from_last_transaction</th>
+<th style="text-align: right;">ratio_to_median_purchase_price</th>
+<th style="text-align: right;">repeat_retailer</th>
+<th style="text-align: right;">used_chip</th>
+<th style="text-align: right;">used_pin_number</th>
+<th style="text-align: right;">online_order</th>
+<th style="text-align: right;">fraud</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">57.877857</td>
+<td style="text-align: right;">0.3111400</td>
+<td style="text-align: right;">1.9459400</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">10.829943</td>
+<td style="text-align: right;">0.1755915</td>
+<td style="text-align: right;">1.2942188</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">5.091080</td>
+<td style="text-align: right;">0.8051526</td>
+<td style="text-align: right;">0.4277146</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2.247564</td>
+<td style="text-align: right;">5.6000435</td>
+<td style="text-align: right;">0.3626626</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">44.190936</td>
+<td style="text-align: right;">0.5664863</td>
+<td style="text-align: right;">2.2227673</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">5.586408</td>
+<td style="text-align: right;">13.2610733</td>
+<td style="text-align: right;">0.0647685</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>The variable explanations are as follows:</p>
+<table class="table">
+<colgroup>
+<col style="width: 36%">
+<col style="width: 39%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Variable Name</th>
+<th style="text-align: center;">Feature Explanation</th>
+<th style="text-align: center;">Type</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">distance_from_home</td>
+<td style="text-align: center;">The distance from home where the transaction happened</td>
+<td style="text-align: center;">Continuous</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">distance_from_last_transaction</td>
+<td style="text-align: center;">The distance from last transaction happened</td>
+<td style="text-align: center;">Continuous</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">ratio_to_median_purchase_price</td>
+<td style="text-align: center;">Ratio of purchased price transaction to median purchase price</td>
+<td style="text-align: center;">Continuous</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">repeat_retailer</td>
+<td style="text-align: center;">Is the transaction happened from same retailer</td>
+<td style="text-align: center;">Discrete</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">used_chip</td>
+<td style="text-align: center;">Is the transaction through credit card chip</td>
+<td style="text-align: center;">Discrete</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">used_pin_number</td>
+<td style="text-align: center;">Is the transaction happened by using PIN number</td>
+<td style="text-align: center;">Discrete</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">online_order</td>
+<td style="text-align: center;">Is the transaction an online order</td>
+<td style="text-align: center;">Discrete</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">fraud</td>
+<td style="text-align: center;">Is the transaction fraudulent</td>
+<td style="text-align: center;">Discrete</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Exploratory Data Analysis</strong></p>
+<p>Building on the introduction, we’ve established a basic understanding of the dataset, including the meaning of each variable. But before progressing to model training, it’s important to deepen our familiarity with the data through comprehensive Exploratory Data Analysis.</p>
+<p>First, we want to check if there is missing values in the dataset</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># check missing values</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>data <span class="sc">%&gt;%</span> <span class="fu">is.na</span>() <span class="sc">%&gt;%</span> <span class="fu">sum</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0</code></pre>
+</div>
+</div>
+<p>Through the code above, we know that this dataset contains no missing value, therefore there is no imputation needed. Then, we can use the following chunk to check the distribution of the variables.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># plot variable distribution</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">3</span>))</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (col <span class="cf">in</span> <span class="fu">colnames</span>(data)) {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  density_values <span class="ot">&lt;-</span> <span class="fu">density</span>(data[[col]])</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(density_values, <span class="at">main =</span> col, <span class="at">col =</span> <span class="st">"skyblue"</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="vignette_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>We can observe from the density curve graph of each variable that except for the first three, the other 5 variables including our response variable ‘fraud’ are binary. But the first three variables are greatly skewed. After that, we want to see if correlation exists between the variables.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># correlation plot</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>))</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Correlation</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>data <span class="sc">%&gt;%</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cor</span>(<span class="at">use =</span> <span class="st">'everything'</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">corrplot</span>(<span class="at">type =</span> <span class="st">'lower'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="vignette_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>From the correlation plot, the numerical variable ‘ratio_to_median’ has a positive correlation with respect to ‘fraud’, and then are ‘distance_from_home’ and ‘online_order’. Other than that, ‘used_pin_number’ has negatively correlated with ‘fraud’. Lastly, we want to specifically analyze the distribution of the response variable, which is our most interested variable.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># response distribution</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>plot.fraud <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(data, <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">ifelse</span>(data<span class="sc">$</span>fraud <span class="sc">==</span> <span class="dv">0</span>, <span class="st">'Safe'</span>, <span class="st">'Fraud'</span>))) <span class="sc">+</span> </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">fill =</span> <span class="fu">c</span>(<span class="st">'cyan'</span>,<span class="st">'cornflowerblue'</span>)) <span class="sc">+</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title=</span><span class="st">"Distribution of Fraud in the Dataset"</span>, <span class="at">x=</span><span class="st">"Fraud Class"</span>, <span class="at">y=</span><span class="st">"Count"</span>) <span class="sc">+</span> </span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)) <span class="sc">+</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">after_stat</span>(count)), <span class="at">stat =</span> <span class="st">"count"</span>, <span class="at">vjust =</span> <span class="fl">1.5</span>, <span class="at">colour =</span> <span class="st">"white"</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>table.fraud <span class="ot">&lt;-</span> <span class="fu">table</span>(<span class="fu">ifelse</span>(data<span class="sc">$</span>fraud <span class="sc">==</span> <span class="dv">0</span>, <span class="st">'Safe'</span>, <span class="st">'Fraud'</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rbind</span>(<span class="fu">c</span>(<span class="st">'8.74%'</span>,<span class="st">'91.26%'</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as.data.frame</span>() <span class="sc">%&gt;%</span> <span class="fu">tableGrob</span>()</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="fu">grid.arrange</span>(<span class="fu">arrangeGrob</span>(plot.fraud, table.fraud, <span class="at">ncol=</span><span class="dv">2</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="vignette_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>This graph represents the distribution of ‘fraud’. Around 91% of the transactions are not fraud and 9% are fraud, which reflects a imbalance in the data. This imbalance suggests adapting performance metrics like AUC-ROC, f1 score as evaluation metrics instead of “accurary” to assess the ML model.</p>
+<p><strong>SMOTE on Bias Dataset in R</strong> In the Credit-card-fraud dataset, where 8.74% of 1,000,000 transactions are fraudulent, stratified sampling will maintain this ratio in each data split to avoid bias towards the majority class.</p>
+<p>Over-sampling is a technique to balance an imbalanced dataset by increasing the number of instances in the underrepresented class, which is the fraudulent transactions. We are going to apply over-sampling using Synthetic Minority Over-sampling Technique <strong>(SMOTE)</strong>.</p>
+<p><strong>SMOTE</strong> is an advanced over-sampling technique used to create synthetic samples for the minority class in an imbalanced dataset. It works by selecting samples that are close in the feature space, drawing a line between the samples in the space and drawing a new sample at a point along that line.</p>
+<p>This approach helps us in creating plausible and diverse synthetic samples, rather than just duplicating existing ones.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(data)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>fraud <span class="ot">&lt;-</span> <span class="fu">as.factor</span>(data<span class="sc">$</span>fraud)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>data_smote <span class="ot">&lt;-</span> <span class="fu">SMOTE</span>(fraud <span class="sc">~</span> ., <span class="at">data =</span> data, <span class="at">perc.over =</span> <span class="dv">200</span>, <span class="at">k =</span> <span class="dv">5</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>data_smote_filtered <span class="ot">&lt;-</span> data_smote <span class="sc">%&gt;%</span> <span class="fu">filter</span>(fraud <span class="sc">!=</span> <span class="dv">0</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>data_fraud_zero <span class="ot">&lt;-</span> <span class="fu">subset</span>(data, fraud <span class="sc">==</span> <span class="dv">0</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>data_smote <span class="ot">&lt;-</span> <span class="fu">rbind</span>(data_smote_filtered, data_fraud_zero)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>fraud <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">as.character</span>(data<span class="sc">$</span>fraud))</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>data_smote<span class="sc">$</span>fraud <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">as.character</span>(data_smote<span class="sc">$</span>fraud))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This following graph represents the distribution of ‘fraud’. It is noticeable that the data is more balanced.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot for distribution of fraud in data_smote</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>plot.fraud_smote <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(data_smote, <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">ifelse</span>(data_smote<span class="sc">$</span>fraud <span class="sc">==</span> <span class="dv">0</span>, <span class="st">'Safe'</span>, <span class="st">'Fraud'</span>))) <span class="sc">+</span> </span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">fill =</span> <span class="fu">c</span>(<span class="st">'cyan'</span>,<span class="st">'cornflowerblue'</span>)) <span class="sc">+</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title=</span><span class="st">"Distribution of Fraud in the SMOTE Dataset"</span>, <span class="at">x=</span><span class="st">"Fraud Class"</span>, <span class="at">y=</span><span class="st">"Count"</span>) <span class="sc">+</span> </span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)) <span class="sc">+</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">after_stat</span>(count)), <span class="at">stat =</span> <span class="st">"count"</span>, <span class="at">vjust =</span> <span class="fl">1.5</span>, <span class="at">colour =</span> <span class="st">"white"</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Table for distribution of fraud in data_smote</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>fraud_table <span class="ot">&lt;-</span> <span class="fu">table</span>(<span class="fu">ifelse</span>(data_smote<span class="sc">$</span>fraud <span class="sc">==</span> <span class="dv">0</span>, <span class="st">'Safe'</span>, <span class="st">'Fraud'</span>))</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>percentage <span class="ot">&lt;-</span> <span class="fu">prop.table</span>(fraud_table) <span class="sc">*</span> <span class="dv">100</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>percentage_formatted <span class="ot">&lt;-</span> <span class="fu">formatC</span>(percentage, <span class="at">format =</span> <span class="st">"f"</span>, <span class="at">digits =</span> <span class="dv">2</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>fraud_table_combined <span class="ot">&lt;-</span> <span class="fu">rbind</span>(fraud_table, percentage_formatted)</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Converting the table to a grob</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>table.fraud_smote <span class="ot">&lt;-</span> <span class="fu">tableGrob</span>(<span class="fu">as.data.frame</span>(fraud_table_combined))</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Arranging the plot and table side by side</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="fu">grid.arrange</span>(plot.fraud_smote, table.fraud_smote, <span class="at">ncol =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="vignette_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p><strong>Data Preprocessing</strong></p>
+<p>Prior to model fitting, it’s essential to assess the scale of the variables, as disparities in scale can adversely affect model performance. In our dataset, variables like distance and ratio are not on the same scale, necessitating their transformation to a unified scale. Additionally, other preprocessing steps are undertaken, including systematic trimming of outliers and renaming selected variables for enhanced clarity and succinctness.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>trim <span class="ot">&lt;-</span> <span class="cf">function</span>(x, .at){</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  x[<span class="fu">abs</span>(x) <span class="sc">&gt;</span> .at] <span class="ot">&lt;-</span> <span class="fu">sign</span>(x[<span class="fu">abs</span>(x) <span class="sc">&gt;</span> .at])<span class="sc">*</span>.at</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(x)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># rename and scale: since some variable are on distance scale/some are ratio</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">dist_home =</span> distance_from_home,</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>         <span class="at">dist_last_transact =</span> distance_from_last_transaction,</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>         <span class="at">ratio_to_med_price =</span> ratio_to_median_purchase_price) <span class="sc">%&gt;%</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="at">.cols =</span> <span class="fu">c</span>(dist_home, dist_last_transact, ratio_to_med_price), </span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>                <span class="sc">~</span> <span class="fu">trim</span>(<span class="fu">scale</span>((.x))[, <span class="dv">1</span>], <span class="at">.at =</span> <span class="dv">3</span>)))</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>data_smote <span class="ot">&lt;-</span> data_smote <span class="sc">%&gt;%</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">dist_home =</span> distance_from_home,</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>         <span class="at">dist_last_transact =</span> distance_from_last_transaction,</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>         <span class="at">ratio_to_med_price =</span> ratio_to_median_purchase_price) <span class="sc">%&gt;%</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="at">.cols =</span> <span class="fu">c</span>(dist_home, dist_last_transact, ratio_to_med_price), </span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>                <span class="sc">~</span> <span class="fu">trim</span>(<span class="fu">scale</span>((.x))[, <span class="dv">1</span>], <span class="at">.at =</span> <span class="dv">3</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Fraud Detection with XGBoost in R</strong></p>
+<p>We are going to train model and evaluate the performance as the following:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./img/overflow.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">The overflow image of the model training process</figcaption>
+</figure>
+</div>
+<p>After importing the dataset, we standardize the data, ensuring that all variables contribute equally to the analysis, scaling the features so they falls in a range of [0,1].</p>
+<p>The standardized data is then split into two sets: one for training the model (Train Set) and one for testing its performance (Test Set).</p>
+<p>On the training set, the Synthetic Minority Over-sampling Technique (SMOTE) is applied.  And the XGBoost algorithm is trained on the SMOTE-processed training data and raw training set as a comparison.</p>
+<p>Then we will evaluation of whether the raw is sufficient for classification, or if SMOTE should be considered for comparison. A metric analysis is performed, which involves computing performance metrics.</p>
+<ul>
+<li>Splitting Train and Test Set</li>
+</ul>
+<p>Once the data is cleaned, additional preparations are required before we proceed with model fitting. Similar to other models, the first step involves splitting the data into subsets. A notable feature of the XGBoost function is the ‘watchlist’ parameter, which allows the inclusion of a validation dataset. This feature displays the log-loss for each boosting iteration on both the training and validation sets, aiding in the prevention of overfitting. Therefore, we partition our dataset into training (60%), validation (20%), and testing (20%) subsets. We apply stratification on the ‘fraud’ variable to ensure each subset is representative of the original dataset’s composition. Following this, the split data must be converted to xgb.DMatrix format, an efficient data structure that is specifically required by the XGBoost model.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">#set seed for reproducibility</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">197</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co">#split training/validation/testing</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>data.split <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span> </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">initial_split</span>(<span class="at">prop =</span> <span class="fl">0.6</span>, <span class="at">strata =</span> fraud)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>test.split <span class="ot">&lt;-</span> <span class="fu">initial_split</span>(<span class="fu">testing</span>(data.split), <span class="at">prop =</span> <span class="fl">0.5</span>, <span class="at">strata =</span> fraud)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>data.val <span class="ot">&lt;-</span> <span class="fu">training</span>(test.split)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>data.test <span class="ot">&lt;-</span> <span class="fu">testing</span>(test.split)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co">#define predictor and response variables in training set</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">NOTE</span><span class="co">: XGBoost only use matrix data</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>train.x <span class="ot">&lt;-</span>  <span class="fu">data.matrix</span>(<span class="fu">training</span>(data.split) <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>fraud))</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>train.y <span class="ot">&lt;-</span>  <span class="fu">training</span>(data.split) <span class="sc">%&gt;%</span> <span class="fu">pull</span>(fraud)</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="co">#define predictor and response variables in validation set</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>val.x <span class="ot">&lt;-</span>  <span class="fu">data.matrix</span>(data.val <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>fraud))</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>val.y <span class="ot">&lt;-</span>  data.val <span class="sc">%&gt;%</span> <span class="fu">pull</span>(fraud)</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="co">#define predictor and response variables in testing set</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>test.x <span class="ot">&lt;-</span>  <span class="fu">data.matrix</span>(data.test <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>fraud))</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>test.y <span class="ot">&lt;-</span>  data.test <span class="sc">%&gt;%</span> <span class="fu">pull</span>(fraud)</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a><span class="co">#define xgb.DMatirx: This is a specialized data structure that xgboost uses for efficiency</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>xgb.train <span class="ot">&lt;-</span>  <span class="fu">xgb.DMatrix</span>(<span class="at">data =</span> train.x, <span class="at">label =</span> train.y)</span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>xgb.val <span class="ot">&lt;-</span>  <span class="fu">xgb.DMatrix</span>(<span class="at">data =</span> val.x, <span class="at">label =</span> val.y)</span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>xgb.test <span class="ot">&lt;-</span>  <span class="fu">xgb.DMatrix</span>(<span class="at">data =</span> test.x, <span class="at">label =</span> test.y)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Repeat the data preparation process for SMOTEed data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set seed for reproducibility</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">197</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Split training/validation/testing for the SMOTE data</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>data_smote.split <span class="ot">&lt;-</span> data_smote <span class="sc">%&gt;%</span> </span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">initial_split</span>(<span class="at">prop =</span> <span class="fl">0.6</span>, <span class="at">strata =</span> fraud)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>test_smote.split <span class="ot">&lt;-</span> <span class="fu">initial_split</span>(<span class="fu">testing</span>(data_smote.split), <span class="at">prop =</span> <span class="fl">0.5</span>, <span class="at">strata =</span> fraud)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>data_smote.val <span class="ot">&lt;-</span> <span class="fu">training</span>(test_smote.split)</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>data_smote.test <span class="ot">&lt;-</span> <span class="fu">testing</span>(test_smote.split)</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Define predictor and response variables in SMOTE training set</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>train_smote.x <span class="ot">&lt;-</span>  <span class="fu">data.matrix</span>(<span class="fu">training</span>(data_smote.split) <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>fraud))</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>train_smote.y <span class="ot">&lt;-</span>  <span class="fu">training</span>(data_smote.split) <span class="sc">%&gt;%</span> <span class="fu">pull</span>(fraud)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Define predictor and response variables in SMOTE validation set</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>val_smote.x <span class="ot">&lt;-</span>  <span class="fu">data.matrix</span>(data_smote.val <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>fraud))</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>val_smote.y <span class="ot">&lt;-</span>  data_smote.val <span class="sc">%&gt;%</span> <span class="fu">pull</span>(fraud)</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Define xgb.DMatrix for the SMOTE datasets</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>xgb_smote.train <span class="ot">&lt;-</span>  <span class="fu">xgb.DMatrix</span>(<span class="at">data =</span> train_smote.x, <span class="at">label =</span> train_smote.y)</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>xgb_smote.val <span class="ot">&lt;-</span>  <span class="fu">xgb.DMatrix</span>(<span class="at">data =</span> val_smote.x, <span class="at">label =</span> val_smote.y)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Model Fitting</strong></p>
+<p>Finally, we are at the model fitting part! Let’s first talk about the parameters<span class="citation" data-cites="XGBoostDocs">[@XGBoostDocs]</span>:</p>
+<ul>
+<li><p><strong>objective:</strong> The goal of the model. In this case, we use ‘binary:logistic’ to predict the probability of having a fraud based on the predictor variables</p></li>
+<li><p><strong>eta:</strong> The learning speed and we used the default value of 0.3</p></li>
+<li><p><strong>data:</strong> Training data in DMatrix structure</p></li>
+<li><p><strong>max.depth:</strong> The size of each tree and a rule of thumb is to use 2 or 3 to prevent overfitting</p></li>
+<li><p><strong>watchlist:</strong> Track model performance on training and validation data during the training process to prevent overfitting</p></li>
+<li><p><strong>nrounds:</strong> Number of boosting rounds</p></li>
+<li><p><strong>early_stopping_rounds:</strong> Stop the training process if the model’s accuracy on validation set hasn’t improved for the specified number of rounds</p></li>
+</ul>
+<p>As mentioned earlier, we utilize a watchlist along with a validation set to determine the optimal number of boosting rounds (nrounds). During training, we monitor the model’s performance on both the training and validation datasets. The watchlist is often used in conjunction with the early_stopping_rounds parameter, which helps in identifying the point of overfitting and the appropriate time to halt the training process. The training ceases when there is no improvement in the model’s performance on the validation set for a consecutively specified number of rounds. At this point, the early_stopping_rounds feature intervenes and shows the optimal number of boosting iterations.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define the watchlist and other parameters</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>watchlist <span class="ot">=</span> <span class="fu">list</span>(<span class="at">train=</span>xgb.train, <span class="at">validation=</span>xgb.val)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>params <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">objective =</span> <span class="st">"binary:logistic"</span>, <span class="co"># loss function for binary classification problem</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">eta =</span> <span class="fl">0.3</span> <span class="co"># learning rate</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="co"># fit XGBoost model: display training and testing data at each round</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span>  <span class="fu">xgb.train</span>(<span class="at">params =</span> params, </span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>                    <span class="at">data =</span> xgb.train, <span class="co"># Training data</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>                    <span class="at">max.depth =</span> <span class="dv">3</span>, <span class="co"># Size of each individual tree</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>                    <span class="at">watchlist=</span>watchlist, <span class="co"># Track model performance on train and validation set</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>                    <span class="at">nrounds =</span> <span class="dv">500</span>, <span class="co"># Number of boosting iterations</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>                    <span class="at">early_stopping_rounds =</span> <span class="dv">50</span>, <span class="co"># Number of iterations we will wait for the next decrease</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>                    <span class="at">verbose =</span> <span class="dv">0</span>) <span class="co">#hide iterations </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>In our analysis, we’ve implemented a comprehensive process involving multiple boosting iterations to fine-tune our XGBoost model. Instead of presenting the extensive textual output of each iteration, we have chosen to visualize the results through a plot of <code>log_loss_values</code>. This approach allows us to clearly and concisely demonstrate the impact of each iteration on the model’s performance.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extracting training and validation log-loss from the model</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>log_loss_values <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(model<span class="sc">$</span>evaluation_log)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(log_loss_values, <span class="fu">aes</span>(<span class="at">x =</span> iter)) <span class="sc">+</span> </span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> train_logloss, <span class="at">colour =</span> <span class="st">"Train Log-Loss"</span>)) <span class="sc">+</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> validation_logloss, <span class="at">colour =</span> <span class="st">"Validation Log-Loss"</span>)) <span class="sc">+</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"XGBoost Training and Validation Log-Loss"</span>, <span class="at">x =</span> <span class="st">"Rounds"</span>, <span class="at">y =</span> <span class="st">"Log-Loss"</span>) <span class="sc">+</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_colour_manual</span>(<span class="st">""</span>, </span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>                        <span class="at">breaks =</span> <span class="fu">c</span>(<span class="st">"Train Log-Loss"</span>, <span class="st">"Validation Log-Loss"</span>),</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>                        <span class="at">values =</span> <span class="fu">c</span>(<span class="st">"blue"</span>, <span class="st">"red"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="vignette_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>From the graph we could see that both curves show a rapid decrease in log-loss in the initial rounds. This indicates that the model quickly learned patterns from the data. After the initial rounds, both curves flatten out, which suggests that additional rounds do not significantly improve the model’s performance in terms of log-loss, suggested the model has reached convergence and further training isn’t likely to lead to better performance on the training and validation datasets.</p>
+<p>Given that the log-loss stabilizes after a certain number of rounds, the early stopping technique of XGBoost has been employed to stop training when the validation log-loss does not improve for a given number of rounds. This would save computational resources and prevent potential overfitting.</p>
+<p>Repeat the same model fitting process on the SMOTEed data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define the watchlist and other parameters</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>watchlist <span class="ot">=</span> <span class="fu">list</span>(<span class="at">train=</span>xgb_smote.train, <span class="at">validation=</span>xgb_smote.val)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>params <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">objective =</span> <span class="st">"binary:logistic"</span>, <span class="co"># loss function for binary classification problem</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">eta =</span> <span class="fl">0.3</span> <span class="co"># learning rate</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="co"># fit XGBoost model: display training and testing data at each round</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>model_smote <span class="ot">&lt;-</span>  <span class="fu">xgb.train</span>(<span class="at">params =</span> params, </span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>                    <span class="at">data =</span> xgb_smote.train, <span class="co"># Training data</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>                    <span class="at">max.depth =</span> <span class="dv">3</span>, <span class="co"># Size of each individual tree</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>                    <span class="at">watchlist=</span>watchlist, <span class="co"># Track model performance on train and validation set</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>                    <span class="at">nrounds =</span> <span class="dv">500</span>, <span class="co"># Number of boosting iterations</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>                    <span class="at">early_stopping_rounds =</span> <span class="dv">50</span>, <span class="co"># Number of iterations we will wait for the next decrease</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>                    <span class="at">verbose =</span> <span class="dv">0</span>) <span class="co">#hide iterations </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extracting training and validation log-loss from the model</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>log_loss_values_smote <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(model_smote<span class="sc">$</span>evaluation_log)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(log_loss_values_smote, <span class="fu">aes</span>(<span class="at">x =</span> iter)) <span class="sc">+</span> </span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> train_logloss, <span class="at">colour =</span> <span class="st">"Train Log-Loss"</span>)) <span class="sc">+</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> validation_logloss, <span class="at">colour =</span> <span class="st">"Validation Log-Loss"</span>)) <span class="sc">+</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"XGBoost Training and Validation Log-Loss"</span>, <span class="at">x =</span> <span class="st">"Rounds"</span>, <span class="at">y =</span> <span class="st">"Log-Loss"</span>) <span class="sc">+</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_colour_manual</span>(<span class="st">""</span>, </span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>                        <span class="at">breaks =</span> <span class="fu">c</span>(<span class="st">"Train Log-Loss"</span>, <span class="st">"Validation Log-Loss"</span>),</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>                        <span class="at">values =</span> <span class="fu">c</span>(<span class="st">"blue"</span>, <span class="st">"red"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="vignette_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p><strong>Final Model Result and Analysis</strong></p>
+<p>The final and crucial step involves assessing the model’s performance. We employ both the ROC-AUC plot and the confusion matrix for this evaluation. By analyzing the model’s performance on the testing dataset using these tools, we observed a remarkable AUC of 0.99988. This exceptionally high score underscores the model’s outstanding proficiency in classifying the testing data, as well as its robust generalizability to new, unseen datasets. Notice that when we analyzing the model trained by the SMOTEed data, we still use the test data from the original dataset not the dataset including simulated data generate by SMOTE.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Use model to make predictions on test data</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>pred.y <span class="ot">&lt;-</span> <span class="fu">predict</span>(model, test.x)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Label test data according to the predicted probability</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>pred.label <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(pred.y <span class="sc">&gt;</span> <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Confusion Matrix</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>confusion.matrix <span class="ot">&lt;-</span> <span class="fu">table</span>(<span class="at">Predicted =</span> pred.label, <span class="at">Actual =</span> test.y)</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="co"># AUC-ROC</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>roc <span class="ot">&lt;-</span> <span class="fu">roc</span>(test.y, pred.label)</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>auc <span class="ot">&lt;-</span> <span class="fu">auc</span>(roc)</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualization</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a><span class="fu">ggroc</span>(roc) <span class="sc">+</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"ROC Curve"</span>, <span class="at">x =</span> <span class="st">"False Positive Rate"</span>, <span class="at">y =</span> <span class="st">"True Positive Rate"</span>) <span class="sc">+</span> </span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="fl">0.2</span>, <span class="at">y =</span> <span class="fl">0.8</span>, <span class="at">label =</span> <span class="fu">paste</span>(<span class="st">"AUC ="</span>, <span class="fu">round</span>(auc, <span class="dv">5</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="vignette_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Use model to make predictions on test data</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>pred.y <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_smote, test.x)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Label test data according to the predicted probability</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>pred.label <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(pred.y <span class="sc">&gt;</span> <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Confusion Matrix</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>confusion.matrix <span class="ot">&lt;-</span> <span class="fu">table</span>(<span class="at">Predicted =</span> pred.label, <span class="at">Actual =</span> test.y)</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="co"># AUC-ROC</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>roc <span class="ot">&lt;-</span> <span class="fu">roc</span>(test.y, pred.label)</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>auc <span class="ot">&lt;-</span> <span class="fu">auc</span>(roc)</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualization</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a><span class="fu">ggroc</span>(roc) <span class="sc">+</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"ROC Curve"</span>, <span class="at">x =</span> <span class="st">"False Positive Rate"</span>, <span class="at">y =</span> <span class="st">"True Positive Rate"</span>) <span class="sc">+</span> </span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="fl">0.2</span>, <span class="at">y =</span> <span class="fl">0.8</span>, <span class="at">label =</span> <span class="fu">paste</span>(<span class="st">"AUC ="</span>, <span class="fu">round</span>(auc, <span class="dv">5</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="vignette_files/figure-html/unnamed-chunk-20-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>These AUC values are very close to 1, which suggests that both models perform exceptionally well in distinguishing between the classes. The model trained with SMOTE has a slightly lower AUC. This might because the synthetic samples created by SMOTE could introduce noise, especially if the minority class is not well-clustered (in this case fraud observation doesn't have a clear distinguishing with safe one). This can lead to a decrease in the model's ability to generalize. It's important to remember that while SMOTE can be very useful in addressing class imbalance, it is not guaranteed to improve all performance metrics in all scenarios. And this is the reason why we need to analysis the both the model trained with SMOTEed dataset and the orignial one.</p>
+<table class="table">
+<thead>
+<tr class="header">
+<th style="text-align: center;"></th>
+<th style="text-align: center;">Actual</th>
+<th style="text-align: center;"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">Predicted</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">1</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">174773</td>
+<td style="text-align: center;">90</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">8059</td>
+<td style="text-align: center;">17078</td>
+</tr>
+</tbody>
+</table>
+<p>Additionally, it’s always a good idea to review the important features identified by the model after training an XGBoost. We can utilize the xgb.plot.importance function to visualize the most important features identified by XGBoost. This step not only aids in understanding the model’s decisions but also enhances our familiarity with this type of dataset, showcasing one of the advantages of tree-based methods: interpretability. The most critical among these is the ratio of the transaction purchase price to the median purchase price. This finding suggests that transactions with amounts significantly deviating from the median are more likely to be fraudulent. Also, the model indicates that online transactions are more likely to be fraudulent. Additionally, the distances from home to the current transaction’s location another important features. Transactions occurring at locations far from home are also more likely to be identified as fraudulent.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Feature Importance</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>importance <span class="ot">&lt;-</span> <span class="fu">xgb.importance</span>(<span class="at">feature_names =</span> <span class="fu">colnames</span>(train.x), <span class="at">model =</span> model_smote)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(importance) <span class="sc">%&gt;%</span> knitr<span class="sc">::</span><span class="fu">kable</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Feature</th>
+<th style="text-align: right;">Gain</th>
+<th style="text-align: right;">Cover</th>
+<th style="text-align: right;">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">ratio_to_med_price</td>
+<td style="text-align: right;">0.5169786</td>
+<td style="text-align: right;">0.2952773</td>
+<td style="text-align: right;">0.2224646</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">dist_home</td>
+<td style="text-align: right;">0.1985413</td>
+<td style="text-align: right;">0.2613019</td>
+<td style="text-align: right;">0.2966194</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">online_order</td>
+<td style="text-align: right;">0.1259689</td>
+<td style="text-align: right;">0.1062986</td>
+<td style="text-align: right;">0.1390403</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">dist_last_transact</td>
+<td style="text-align: right;">0.0746226</td>
+<td style="text-align: right;">0.2085773</td>
+<td style="text-align: right;">0.1586696</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">used_chip</td>
+<td style="text-align: right;">0.0434573</td>
+<td style="text-align: right;">0.0507553</td>
+<td style="text-align: right;">0.0785169</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">used_pin_number</td>
+<td style="text-align: right;">0.0404314</td>
+<td style="text-align: right;">0.0777895</td>
+<td style="text-align: right;">0.1046892</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># plot 3 most important features</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">xgb.plot.importance</span>(<span class="at">importance_matrix =</span> importance, <span class="at">top_n =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="vignette_files/figure-html/unnamed-chunk-21-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="optimization-on-real-world-dataset" class="level2">
+<h2 class="anchored" data-anchor-id="optimization-on-real-world-dataset">Optimization on Real World Dataset</h2>
+<p>Finding the optimal parameter for XGBoost with grid search and validating it with k-fold training is a common approach to model optimization only when exposed to data where the discrimination is not significant enough. To find the optimal parameters for an XGBoost model using grid search and k-fold cross-validation in R, we utilize the <code>caret</code> package which provides an easy-to-use framework for both procedures. Below is a step-by-step guide and code snippet to accomplish this task.</p>
+<p><strong>Prepare Data</strong></p>
+<p>Before running the optimization, we need to prepare our data. Preparing data involves creating a structure that the XGBoost algorithm can work with efficiently:</p>
+<ul>
+<li><p>Set Seed: We start by setting a seed for reproducibility. This is important because it ensures that any random operations can be recreated in future runs of the same code.</p></li>
+<li><p>Create k-fold Cross-Validation Indices: We then define the number of folds for our cross-validation. Cross-validation is a method used to evaluate predictive models by partitioning the original sample into a training set to train the model, and a test set to evaluate it. Here, we use a 5-fold cross-validation, which is a common choice. This means the data is divided into 5 parts, the model is trained on 4 parts and validated on the 5th, and this process is repeated 5 times.</p></li>
+<li><p>Stratify by Fraud: When we create the folds, we stratify by the fraud variable. Stratification ensures that each fold is a good representative of the whole by having approximately the same percentage of samples of each target class as the complete set.</p></li>
+<li><p>Loop Over Each Fold: We loop over each of the 5 folds and within each iteration, we prepare the training and validation datasets. For XGBoost, we need to convert our data into a special format called xgb.DMatrix, which is optimized for both memory efficiency and training speed.</p></li>
+<li><p>Training and Validation Sets: Inside the loop, we separate the features (predictor variables) from the target (response variable, fraud) for both training and validation sets. This separation is essential for supervised learning where the model needs to learn the relationship between the features and the target.</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set seed for reproducibility</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">197</span>)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Create k-fold cross-validation indices</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>k <span class="ot">&lt;-</span> <span class="dv">5</span> <span class="co"># Number of folds</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>folds <span class="ot">&lt;-</span> <span class="fu">vfold_cv</span>(data, <span class="at">v =</span> k, <span class="at">strata =</span> fraud)</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>xgb_folds <span class="ot">&lt;-</span> <span class="fu">list</span>() <span class="co"># List to store xgb.DMatrix</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Loop</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>k){</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Split data into training and validation sets</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  train_fold <span class="ot">&lt;-</span> <span class="fu">training</span>(folds<span class="sc">$</span>splits[[i]])</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  val_fold <span class="ot">&lt;-</span> <span class="fu">testing</span>(folds<span class="sc">$</span>splits[[i]])</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Define predictor and response variables</span></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>  train.x <span class="ot">&lt;-</span> <span class="fu">data.matrix</span>(train_fold <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>fraud))</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  train.y <span class="ot">&lt;-</span> train_fold <span class="sc">%&gt;%</span> <span class="fu">pull</span>(fraud)</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Define predictor and response variables for validation</span></span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>  val.x <span class="ot">&lt;-</span> <span class="fu">data.matrix</span>(val_fold <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>fraud))</span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>  val.y <span class="ot">&lt;-</span> val_fold <span class="sc">%&gt;%</span> <span class="fu">pull</span>(fraud)</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Create xgb.DMatrix for the current fold</span></span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>  xgb_train_fold <span class="ot">&lt;-</span> <span class="fu">xgb.DMatrix</span>(<span class="at">data =</span> train.x, <span class="at">label =</span> train.y)</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>  xgb_val_fold <span class="ot">&lt;-</span> <span class="fu">xgb.DMatrix</span>(<span class="at">data =</span> val.x, <span class="at">label =</span> val.y)</span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Store in the list</span></span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a>  xgb_folds[[i]] <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">train =</span> xgb_train_fold, <span class="at">val =</span> xgb_val_fold)</span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Define Parameter Grid</strong></p>
+<p>This section involves setting up a grid of hyperparameters we wish to tune. Hyperparameters are the configuration settings used to structure the machine learning model:</p>
+<ul>
+<li><p>Parameter Grid: We create a grid of potential hyperparameters with expand.grid(). This function produces all combinations of the hyperparameters provided. In the grid, we vary eta (learning rate), max_depth (maximum depth of a tree), and gamma (minimum loss reduction required to make a further partition).</p></li>
+<li><p>Tracking Best Performance: We initialize variables to keep track of the best score, the best model, and the best parameters during the grid search.</p></li>
+<li><p>Performance Metric Function: An optional performance metric function is defined that will calculate the desired performance metric, such as accuracy, F1 score, etc., based on predictions and actual values. Here we are using the ROC function we used in the example model.</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the parameter grid</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>param_grid <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">eta =</span> <span class="fu">c</span>(<span class="fl">0.01</span>, <span class="fl">0.1</span>, <span class="fl">0.3</span>),</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">max_depth =</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>),</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">5</span>)</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>best_score <span class="ot">&lt;-</span> <span class="sc">-</span><span class="cn">Inf</span>  <span class="co"># Initialize a variable to track the best score</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>best_model <span class="ot">&lt;-</span> <span class="cn">NULL</span>  <span class="co"># Initialize a variable to store the best model</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>best_params <span class="ot">&lt;-</span> <span class="cn">NULL</span>  <span class="co"># Initialize a variable to store the best parameters</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a><span class="do">## Metric Analysis Structure (Optional)</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>performance_metric <span class="ot">&lt;-</span> <span class="cf">function</span>(predictions, actuals) {</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Replace this with other spectific metric calculation</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># For example, this could be F1 score, precision, recall, etc.</span></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>  calculated_metric <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(calculated_metric)</span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Grid Search</strong></p>
+<p>In this section, we use the parameter grid to find the best hyperparameters for the XGBoost model:</p>
+<ul>
+<li><p>Fitting Models: We loop over each combination of parameters in our grid. For each combination, we perform k-fold cross-validation.</p></li>
+<li><p>k-Fold Cross-Validation: For each fold and parameter combination, we train an XGBoost model and validate it. We use the watchlist to monitor the training process on both training and validation sets.</p></li>
+<li><p>Model Evaluation: We predict on the validation set and calculate the Area Under the ROC Curve (AUC) as our performance metric. This metric is suitable for binary classification problems.</p></li>
+<li><p>Finding the Best Parameters: We calculate the average AUC score across all folds. If the average score of the current model is better than the best score we’ve tracked so far, we update our best model and parameters.</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="do">## Fitting</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Loop over all combinations of parameters</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(param_grid)){</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  params <span class="ot">&lt;-</span> param_grid[i, ] <span class="co"># Extract parameters</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  cv_scores <span class="ot">&lt;-</span> <span class="fu">numeric</span>(<span class="fu">length</span>(xgb_folds)) <span class="co"># store cross-validation scores</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># k-fold cross-validation</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(xgb_folds)){</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    watchlist <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">train =</span> xgb_folds[[j]]<span class="sc">$</span>train, <span class="at">validation =</span> xgb_folds[[j]]<span class="sc">$</span>val)</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    model <span class="ot">&lt;-</span> <span class="fu">xgb.train</span>(<span class="at">params =</span> <span class="fu">as.list</span>(params),</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>                       <span class="at">data =</span> xgb_folds[[j]]<span class="sc">$</span>train,</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>                       <span class="at">nrounds =</span> <span class="dv">500</span>, </span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>                       <span class="at">watchlist =</span> watchlist,</span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>                       <span class="at">early_stopping_rounds =</span> <span class="dv">50</span>)</span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>    pred <span class="ot">&lt;-</span> <span class="fu">predict</span>(model, xgb_folds[[j]]<span class="sc">$</span>val)</span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>    actual_vals <span class="ot">&lt;-</span> <span class="fu">getinfo</span>(xgb_folds[[j]]<span class="sc">$</span>val, <span class="st">"label"</span>)</span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>    score <span class="ot">&lt;-</span> <span class="fu">roc</span>(actual_vals, pred)<span class="sc">$</span>auc</span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>    cv_scores[j] <span class="ot">&lt;-</span> score <span class="co"># store the score</span></span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Compute the average score across all folds</span></span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>  avg_score <span class="ot">&lt;-</span> <span class="fu">mean</span>(cv_scores)</span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Update best score, model, and parameters if current model is better</span></span>
+<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(avg_score <span class="sc">&gt;</span> best_score){</span>
+<span id="cb23-27"><a href="#cb23-27" aria-hidden="true" tabindex="-1"></a>    best_score <span class="ot">&lt;-</span> avg_score</span>
+<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a>    best_model <span class="ot">&lt;-</span> model</span>
+<span id="cb23-29"><a href="#cb23-29" aria-hidden="true" tabindex="-1"></a>    best_params <span class="ot">&lt;-</span> params</span>
+<span id="cb23-30"><a href="#cb23-30" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-31"><a href="#cb23-31" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This approach ensures that we systematically search through the hyperparameter space and validate each model’s performance in a way that is robust against overfitting.</p>
+</section>
+<section id="check-list" class="level2">
+<h2 class="anchored" data-anchor-id="check-list">Check List</h2>
+<ol type="1">
+<li>Conducted Exploratory Data Analysis to gain an understanding of the dataset</li>
+<li>Divided the data into training, validation, and test sets, and converted it into the xgb.DMatrix structure</li>
+<li>Utilized the xgb.train function with the watchlist and early_stopping_rounds parameters to determine the optimal number of boosting rounds</li>
+<li>Trained the final model using the identified optimal number of rounds as nrounds</li>
+<li>Evaluated the model’s performance using ROC-AUC plot and confusion matrix</li>
+<li>Undertook additional analysis, such as visualizing the importance of features identified by the model</li>
+<li>Now, it’s your turn to put these steps into practice!</li>
+</ol>
+</section>
+<section id="reference" class="level2">
+<h2 class="anchored" data-anchor-id="reference">Reference</h2>
+<ul>
+<li><p>He, Shen, et al.&nbsp;“An Effective Cost-Sensitive XGBoost Method for Malicious URLs Detection in Imbalanced Dataset.” <em>IEEE Access</em>, vol.&nbsp;9, 2021, pp.&nbsp;93089<e2>&lt;80&gt;&lt;93&gt;93096, doi:10.1109/access.2021.3093094.</e2></p></li>
+<li><p>ULB, Machine Learning Group -. “Credit Card Fraud Detection.” <em>Kaggle</em>, 23 Mar.&nbsp;2018, www.kaggle.com/datasets/mlg-ulb/creditcardfraud. Accessed 06 Dec.&nbsp;2023.</p></li>
+<li><p>“XGBoost Documentation<ef>&lt;83&gt;&lt;81&gt;.” <em>XGBoost Documentation - Xgboost 2.0.2 Documentation</em>, xgboost.readthedocs.io/.</ef></p></li>
+</ul>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
